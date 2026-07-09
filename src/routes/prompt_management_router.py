@@ -80,4 +80,19 @@ def rollback_prompt(data: PromptManagementRollbackPromptInput):
 
 @router.get("/get/{prompt_id}", response_model=PromptManagementGetPromptOutput)
 def get_prompt(prompt_id: str):
-    ...
+    try:
+        status, message, prompt = prompt_management_uc.get_prompt(
+            prompt_id=prompt_id
+        )
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        status = False
+        message = f"Error getting prompt {prompt_id}. Ex.: {e}"
+        prompt = None
+    output = {
+        "status": status,
+        "message": message,
+        "content": prompt
+    }
+    return PromptManagementGetPromptOutput(**output)
+

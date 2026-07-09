@@ -168,3 +168,22 @@ class PromptManagementUC:
             return True, f"Finished rollback prompt {prompt_id} from version {catalog_entity.get("version")} to {version}"
         except Exception as e:
             return False, f"Error on rollback prompt version: {e}"
+
+    def get_prompt(self, prompt_id: PromptId) -> str:
+        try:
+            if not self.__check_if_prompt_already_exists_in_catalog(prompt_id=prompt_id):
+                return False, f"Prompt {prompt_id} does not exist", None
+            
+            # Check if prompt_id exist in catalog
+            catalog_entity = self.__st_handler.read_entity(table_name=self.__PROMPT_CATALOG_TABLE_NAME,
+                                                           column="prompt_id",
+                                                           value=prompt_id)
+            if catalog_entity is None:
+                return False, "Error reading current prompt in catalog", None
+            elif len(catalog_entity) == 0:
+                return False, "Prompt is not in catalog, first sign up the prompt", None
+            catalog_entity = catalog_entity[0]
+
+            return True, f"Prompt {prompt_id} found", catalog_entity.get("prompt")
+        except Exception as e:
+            return False, f"Error getting prompt: {e}", None
