@@ -13,7 +13,7 @@ PromptId = Annotated[
 
 PromptVersion = Annotated[
     str, 
-    Field(description="Versão do prompt (ex: v1.0.0)", pattern=r"^v\d+\.\d+\.\d+$")
+    Field(description="Versão do prompt (ex: v1.0.0)", pattern=r"^\d+\.\d+\.\d+$")
     ]
 
 PromptType = Annotated[

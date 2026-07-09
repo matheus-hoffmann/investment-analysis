@@ -5,6 +5,7 @@ from azure.data.tables import TableServiceClient, UpdateMode
 from src.config.logger import set_logger
 from src.handlers.abstract.data_table_interface import DataTableInterface
 
+
 logger = set_logger("AZURE STORAGE ACCOUNT TABLE")
 
 
@@ -106,3 +107,12 @@ class StorageAccountTableHandler(DataTableInterface):
         except Exception as e:
             logger.error(f"Error searching entity on table {table_name}: {e}")
             return None
+    
+    def create_table_if_not_exists(self, table_name: str):
+        try:
+            if not self.check_if_table_exists(table_name=table_name):
+                self.set_client().create_table(table_name=table_name)
+            return True
+        except Exception as e:
+            logger.error(f"Error creating table {table_name}: {e}")
+            return False

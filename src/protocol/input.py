@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 from src.models.commons import (
     UserId,
     PromptId,
-    PromptVersion,
     PromptType,
     PromptContent
 )

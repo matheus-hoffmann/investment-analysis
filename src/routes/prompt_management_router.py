@@ -14,29 +14,50 @@ from src.protocol.output import (
     PromptManagementGetPromptOutput
 )
 
+from src.use_cases.prompt_management_uc import PromptManagementUC
 
 router = APIRouter()
 logger = set_logger("PROMPT MANAGEMENT ROUTER")
 
 
+prompt_management_uc = PromptManagementUC()
+
+
 @router.post("/sign-up", response_model=PromptManagementSignUpPromptOutput)
 def sign_up_prompt(data: PromptManagementSignUpPromptInput):
     try:
-        _data = data.model_dump_json()
-        output = {'status': "..."}
+        status, message = prompt_management_uc.sign_up_prompt(
+            user_id=data.user_id,
+            prompt_id=data.prompt_id,
+            prompt_type=data.prompt_type,
+            prompt=data.prompt
+        )
     except Exception as e:
         logger.error(f"Error: {e}")
-        output = {'status': ""}
+        status = False
+        message = f"Error creating prompt {data.prompt_id}. Ex.: {e}"
+    output = {
+        "status": status,
+        "message": message
+    }
     return PromptManagementSignUpPromptOutput(**output)
 
 @router.post("/update", response_model=PromptManagementUpdatePromptOutput)
 def update_prompt(data: PromptManagementUpdatePromptInput):
     try:
-        _data = data.model_dump_json()
-        output = {'status': "..."}
+        status, message = prompt_management_uc.update_prompt(
+            user_id=data.user_id,
+            prompt_id=data.prompt_id,
+            prompt=data.prompt
+        )
     except Exception as e:
         logger.error(f"Error: {e}")
-        output = {'status': ""}
+        status = False
+        message = f"Error updating prompt {data.prompt_id}. Ex.: {e}"
+    output = {
+        "status": status,
+        "message": message
+    }
     return PromptManagementUpdatePromptOutput(**output)
 
 @router.post("/rollback", response_model=PromptManagementRollbackPromptOutput)
