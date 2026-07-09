@@ -5,7 +5,8 @@ from src.models.commons import (
     UserId,
     PromptId,
     PromptType,
-    PromptContent
+    PromptContent,
+    PromptVersion
 )
 
 
@@ -23,3 +24,4 @@ class PromptManagementUpdatePromptInput(BaseModel):
 class PromptManagementRollbackPromptInput(BaseModel):
     user_id: UserId
     prompt_id: PromptId
+    version: PromptVersion

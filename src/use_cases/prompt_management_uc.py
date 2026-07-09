@@ -1,21 +1,3 @@
-"""
-Duas tabelas
-Tabela 1: Prompt Versioning
-    used_id
-    prompt_id
-    prompt_type
-    prompt
-    version
-    datetime
-
-Tabela 2: Stable Version
-    prompt_id
-    prompt_type
-    prompt
-    version
-    datetime
-    updated_by
-"""
 from src.config.logger import set_logger
 from src.decorators.singleton import singleton
 from src.handlers.azure.storage_account_table_handler import StorageAccountTableHandler
@@ -24,7 +6,8 @@ from src.models.commons import (
     UserId,
     PromptId,
     PromptType,
-    PromptContent
+    PromptContent,
+    PromptVersion
 )
 from src.models.prompt_catalog_table_model import PromptCatalogTableModel
 from src.models.prompt_versioning_table_model import PromptVersioningTableModel
@@ -45,15 +28,18 @@ class PromptManagementUC:
         self.__st_handler.create_table_if_not_exists(table_name=self.__PROMPT_CATALOG_TABLE_NAME)
         self.__st_handler.create_table_if_not_exists(table_name=self.__PROMPT_VERSIONING_TABLE_NAME)
 
-    def __check_if_prompt_already_exists(self, prompt_id: PromptId) -> bool:
+    def __check_if_prompt_already_exists_in_catalog(self, prompt_id: PromptId) -> bool:
         return len(self.__st_handler.generic_filter(table_name=self.__PROMPT_CATALOG_TABLE_NAME, filter={"prompt_id": prompt_id})) > 0
 
     def __check_if_prompt_is_the_same_in_catalog(self, prompt_id: PromptId, prompt: PromptContent) -> bool:
         return len(self.__st_handler.generic_filter(table_name=self.__PROMPT_CATALOG_TABLE_NAME, filter={"prompt_id": prompt_id, "prompt": prompt})) > 0
 
+    def __check_if_prompt_version_exists_in_versioning(self, prompt_id: PromptId, version: PromptVersion) -> bool:
+        return len(self.__st_handler.generic_filter(table_name=self.__PROMPT_VERSIONING_TABLE_NAME, filter={"prompt_id": prompt_id, "version": version})) > 0
+
     def sign_up_prompt(self, user_id: UserId, prompt_id: PromptId, prompt_type: PromptType, prompt: PromptContent) -> bool:
         try:
-            if self.__check_if_prompt_already_exists(prompt_id=prompt_id):
+            if self.__check_if_prompt_already_exists_in_catalog(prompt_id=prompt_id):
                 return False, f"Prompt {prompt_id} already exists, only update it"
             
             catalog_model = PromptCatalogTableModel(
@@ -131,8 +117,54 @@ class PromptManagementUC:
             self.__st_handler.update_entity(
                 row_key=catalog_entity.get("RowKey"),
                 table_name=self.__PROMPT_CATALOG_TABLE_NAME,
-                data=versioning_model.model_dump()
+                data=catalog_model.model_dump()
             ) 
             return True, f"Prompt successfully updated prompt {prompt_id}"
         except Exception as e:
-            return False, f"Error signing up prompt: {e}"
+            return False, f"Error updating prompt: {e}"
+    
+    def rollback_prompt(self, user_id: UserId, prompt_id: PromptId, version: PromptVersion) -> bool:
+        try:
+            if not self.__check_if_prompt_version_exists_in_versioning(prompt_id=prompt_id, version=version):
+                return False, f"Prompt {prompt_id} version {version} does not exist"
+            
+            # Check if prompt_id and version exist in versioning table
+            versioning_entity = self.__st_handler.generic_filter(table_name=self.__PROMPT_VERSIONING_TABLE_NAME,
+                                                              filter={"prompt_id": prompt_id, "version": version})
+            if versioning_entity is None:
+                return False, "Error reading current prompt in versioning table"
+            elif len(versioning_entity) == 0:
+                return False, "Prompt is not in versioning table, first sign up the prompt"
+            versioning_entity = versioning_entity[0]
+
+            # Get catalog row_key
+            catalog_entity = self.__st_handler.read_entity(table_name=self.__PROMPT_CATALOG_TABLE_NAME,
+                                                           column="prompt_id",
+                                                           value=prompt_id)
+            if catalog_entity is None:
+                return False, "Error reading current prompt in catalog"
+            elif len(catalog_entity) == 0:
+                return False, "Prompt is not in catalog, first sign up the prompt"
+            catalog_entity = catalog_entity[0]
+
+            if version == catalog_entity.get("version"):
+                return False, f"Used prompt {prompt_id} already is version {version}"
+
+            # Create updated catalog component
+            catalog_model = PromptCatalogTableModel(prompt_id=prompt_id,
+                                                    prompt_type=versioning_entity.get("prompt_type"),
+                                                    prompt=versioning_entity.get("prompt"),
+                                                    updated_by=user_id,
+                                                    version=version)
+
+            
+            
+            # Update prompt on catalog table
+            self.__st_handler.update_entity(
+                row_key=catalog_entity.get("RowKey"),
+                table_name=self.__PROMPT_CATALOG_TABLE_NAME,
+                data=catalog_model.model_dump()
+            ) 
+            return True, f"Finished rollback prompt {prompt_id} from version {catalog_entity.get("version")} to {version}"
+        except Exception as e:
+            return False, f"Error on rollback prompt version: {e}"

@@ -63,11 +63,19 @@ def update_prompt(data: PromptManagementUpdatePromptInput):
 @router.post("/rollback", response_model=PromptManagementRollbackPromptOutput)
 def rollback_prompt(data: PromptManagementRollbackPromptInput):
     try:
-        _data = data.model_dump_json()
-        output = {'status': "..."}
+        status, message = prompt_management_uc.rollback_prompt(
+            user_id=data.user_id,
+            prompt_id=data.prompt_id,
+            version=data.version
+        )
     except Exception as e:
         logger.error(f"Error: {e}")
-        output = {'status': ""}
+        status = False
+        message = f"Error on rollback prompt {data.prompt_id}. Ex.: {e}"
+    output = {
+        "status": status,
+        "message": message
+    }
     return PromptManagementRollbackPromptOutput(**output)
 
 @router.get("/get/{prompt_id}", response_model=PromptManagementGetPromptOutput)
