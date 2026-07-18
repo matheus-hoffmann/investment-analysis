@@ -1,3 +1,5 @@
+from typing import Any, Optional, Type
+
 from src.config.logger import set_logger
 from src.decorators.singleton import singleton
 from src.handlers.azure.storage_account_table_handler import StorageAccountTableHandler
@@ -27,6 +29,17 @@ class PromptManagementUC:
         self.__st_handler = StorageAccountTableHandler()
         self.__st_handler.create_table_if_not_exists(table_name=self.__PROMPT_CATALOG_TABLE_NAME)
         self.__st_handler.create_table_if_not_exists(table_name=self.__PROMPT_VERSIONING_TABLE_NAME)
+
+    def __enter__(self) -> "PromptManagementUC":
+        return self
+    
+    def __exit__(
+        self, 
+        exc_type: Optional[Type[BaseException]], 
+        exc_val: Optional[BaseException], 
+        exc_tb: Optional[Any]
+    ) -> Optional[bool]:
+        return False
 
     def __check_if_prompt_already_exists_in_catalog(self, prompt_id: PromptId) -> bool:
         return len(self.__st_handler.generic_filter(table_name=self.__PROMPT_CATALOG_TABLE_NAME, filter={"prompt_id": prompt_id})) > 0
