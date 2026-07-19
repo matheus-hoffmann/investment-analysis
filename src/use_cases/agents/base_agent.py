@@ -24,10 +24,10 @@ class BaseAgent:
                 agents=agents,
                 tools=_tools,
                 prompt=system_prompt,
-                supervisor_name=agent_name,
+                # supervisor_name=agent_name,
                 add_handoff_back_messages=True,
                 output_mode="full_history"
-            ).compile()
+            ).compile(name=agent_name)
 
         elif isinstance(tools, list):
             _tools = tools if len(tools) == 0 else None

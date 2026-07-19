@@ -19,9 +19,10 @@ class AzureOpenAIHandler(LLMInterface):
         return self.set_embedding(model=os.getenv('AZURE_OPENAI_EMBEDDING_NAME', "text-embedding-ada-002")).embed_query(text)
     
     def set_llm(self):
-        return OpenAI(
-            base_url=os.getenv('AZURE_OPENAI_ENDPOINT'),
-            api_key=os.getenv('AZURE_OPENAI_API_KEY')
+        return AzureChatOpenAI(
+            azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),
+            api_key=os.getenv('AZURE_OPENAI_API_KEY'),
+            azure_deployment=os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME')
         )
 
     def invoke(self, text):
